@@ -1,7 +1,7 @@
 let dictionary = {};
 
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('dictionary.json')
+    fetch('http://localhost:5000/api/words')
         .then(response => response.json())
         .then(data => {
             dictionary = data;
@@ -14,25 +14,47 @@ document.getElementById('addButton').addEventListener('click', function() {
     const newDefinition = document.getElementById('definitionInput').value;
 
     if (newWord && newDefinition) {
-        dictionary[newWord] = newDefinition;
-        saveDictionary();
-        alert(`Word "${newWord}" has been added/updated.`);
-        updateWordList();
+        fetch('http://localhost:5000/api/words', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ word: newWord, definition: newDefinition })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            return fetch('http://localhost:5000/api/words');
+        })
+        .then(response => response.json())
+        .then(data => {
+            dictionary = data;
+            updateWordList();
+        });
     } else {
-        alert("Please enter both a word and a definition.");
+        alert("용어 혹은 정의가 비어있습니다.");
     }
 });
 
 document.getElementById('deleteButton').addEventListener('click', function() {
     const deleteWord = document.getElementById('deleteWordInput').value.toLowerCase();
 
-    if (deleteWord in dictionary) {
-        delete dictionary[deleteWord];
-        saveDictionary();
-        alert(`Word "${deleteWord}" has been deleted.`);
-        updateWordList();
+    if (deleteWord) {
+        fetch(`http://localhost:5000/api/words/${deleteWord}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            return fetch('http://localhost:5000/api/words');
+        })
+        .then(response => response.json())
+        .then(data => {
+            dictionary = data;
+            updateWordList();
+        });
     } else {
-        alert("Word not found in dictionary.");
+        alert("삭제 할 용어를 입력해주세요.");
     }
 });
 
@@ -51,7 +73,7 @@ function updateWordList() {
 
             // Create the edit button
             const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
+            editButton.textContent = '수정';
             editButton.addEventListener('click', function() {
                 document.getElementById('newWordInput').value = word;
                 document.getElementById('definitionInput').value = dictionary[word];
@@ -64,14 +86,4 @@ function updateWordList() {
             wordList.appendChild(listItem);
         }
     }
-}
-
-function saveDictionary() {
-    const blob = new Blob([JSON.stringify(dictionary, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'dictionary.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
